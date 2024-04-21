@@ -1,4 +1,4 @@
-﻿#NoEnv
+#NoEnv
 SendMode Input
 SetWorkingDir %A_ScriptDir%
 #SingleInstance force
@@ -162,7 +162,7 @@ hotkey_space:
   If !WinActive("ahk_class CabinetWClass")
     return
   ; get current folder path
-  vFolder := ActiveExplorerPath()
+  vFolder := ActiveExplorerTabPath()
   ; trim any trailing backslash (in case active folder is a root drive e.g. C:\ )
   vFolder := RTrim(vFolder, "\")
 
@@ -217,26 +217,34 @@ ToggleHotkeys(vState := "on")
   Hotkey, Esc     , hotkey_esc      , % vState
 }
 
-
-; function: get active window File Explorer folder path
-; ref https://docs.microsoft.com/en-us/windows/win32/shell/folderitem-path
-ActiveExplorerPath()
+ActiveExplorerTabPath()
 {
-  vHwnd := WinActive("ahk_class CabinetWClass")
-  if (vHwnd)
-    for window in ComObjCreate("Shell.Application").Windows
-    {
-      vWindowHwnd := ""
-      try vWindowHwnd := window.HWND
-      if (vWindowHwnd = vHwnd)
-      {
-        path := window.Document.Folder.Self.Path
-        ; if start with "::" (for example Control Panel window) then return nothing
-        return SubStr(path, 1, 2) = "::" ? "" : path
-      }
-    }
+  currentTab := GetActiveExplorerTab()
+  path := currentTab.Document.Folder.Self.Path
+  ; if start with "::" (for example Control Panel window) then return nothing
+  return SubStr(path, 1, 2) = "::" ? "" : path
 }
 
+;ntepa@https://www.autohotkey.com/boards/viewtopic.php?p=488735#p488735
+GetActiveExplorerTab(hwnd:="") {
+    if !hwnd
+        hwnd := WinExist("A")
+    activeTab := 0
+    try ControlGet, activeTab, Hwnd,, % "ShellTabWindowClass1", % "ahk_id" hwnd
+    for w in ComObjCreate("Shell.Application").Windows {
+        if (w.hwnd != hwnd)
+            continue
+        if activeTab {
+            static IID_IShellBrowser := "{000214E2-0000-0000-C000-000000000046}"
+            shellBrowser := ComObjQuery(w, IID_IShellBrowser, IID_IShellBrowser)
+            DllCall(NumGet(numGet(shellBrowser+0)+3*A_PtrSize), "Ptr", shellBrowser, "UInt*", thisTab)
+            if (thisTab != activeTab)
+                continue
+            ObjRelease(shellBrowser)
+        }
+        return w
+    }
+}
 
 ; function: SelectNamedFileExplorer(filename, [hwnd])
 ; select a single filename in File Explorer window using ComObj and Folder.ParseName
