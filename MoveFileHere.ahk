@@ -232,7 +232,9 @@ GetActiveExplorerTab(hwnd:="") {
     activeTab := 0
     try ControlGet, activeTab, Hwnd,, % "ShellTabWindowClass1", % "ahk_id" hwnd
     for w in ComObjCreate("Shell.Application").Windows {
-        if (w.hwnd != hwnd)
+        vWindowHwnd := ""
+        try vWindowHwnd := w.HWND
+        if (vWindowHwnd != hwnd)
             continue
         if activeTab {
             static IID_IShellBrowser := "{000214E2-0000-0000-C000-000000000046}"
